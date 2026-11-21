@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'self' http://localhost:* http://127.0.0.1:* https:">
+  <title>BuscaGeo</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">BG</div>
+      <div><strong>BuscaGeo</strong><span>Assistente local de arquivos rurais</span></div>
+    </div>
+    <div class="top-actions"><span class="privacy"><span class="privacy-dot"></span> Documentos locais; trechos só saem
+        com autorização</span><button class="button button-light" id="aiSettingsBtn">Configurar IA</button><button
+        class="button button-light" id="referenceBtn">＋ Referências</button><button class="button button-primary"
+        id="scanBtn">⟳ Atualizar catálogo</button></div>
+  </header>
+  <main class="layout">
+    <aside class="sidebar">
+      <section class="side-section">
+        <div class="side-heading">
+          <div><span class="eyebrow">ESCOPO DA BUSCA</span>
+            <h2>Pastas e HDs</h2>
+          </div><button class="icon-button" id="addFoldersBtn" title="Adicionar pasta ou HD">＋</button>
+        </div>
+        <p class="side-copy">Atualize o catálogo para buscar também dentro de PDFs, DOCX, planilhas, CSV, TXT e XML. O
+          texto extraído fica apenas no índice local.</p>
+        <div id="rootsList" class="roots-list"></div>
+        <button class="button button-outline full-width" id="addFoldersBtn2">＋ Adicionar pasta ou HD</button>
+      </section>
+      <section class="side-section references-section">
+        <div class="side-heading">
+          <div><span class="eyebrow">NOMES E APELIDOS</span>
+            <h2>Referências</h2>
+          </div><span id="refCount" class="count-pill">0</span>
+        </div>
+        <p class="side-copy">Ligue nomes diferentes à pasta real do projeto, como “Antônio Boca da Mata” e “Conceição”.
+        </p>
+        <div id="referencesList" class="references-list"></div>
+        <button class="text-button" id="referenceBtn2">＋ Cadastrar outra referência</button>
+      </section>
+      <section class="legacy-index-card hidden" id="legacyIndexCard">
+        <div><strong>Catálogo antigo preservado</strong><span>Não é usado pelo catálogo SQLite novo. Você pode apagar o
+            JSON anterior para liberar espaço.</span></div><button id="deleteLegacyIndexButton"
+          class="button button-light">Apagar catálogo antigo</button>
+      </section>
+      <section class="retention-card">
+        <label class="retention-toggle"><input type="checkbox" id="keepIndexToggle"><span><strong>Manter catálogo entre
+              sessões</strong><small>Guarda localmente metadados e texto extraído dos formatos compatíveis; o índice
+              temporário é removido ao fechar.</small></span></label>
+        <p id="retentionStatus">Desativado: o banco temporário será removido ao fechar o aplicativo.</p>
+        <label class="retention-toggle watcher-toggle"><input type="checkbox"
+            id="watchIndexToggle"><span><strong>Atualizar mudanças automaticamente</strong><small>Monitora as pastas
+              escolhidas para incluir arquivos novos, alterados ou removidos.</small></span></label>
+        <p id="watchStatus">Monitoramento desligado.</p>
+      </section>
+      <div class="sidebar-foot">
+        <div class="mini-shield">✓</div>
+        <div><strong>Busca privada</strong><span>Documentos e trechos permanecem neste computador, exceto quando você
+            autorizar explicitamente o envio de trechos à IA remota.</span></div>
+      </div>
+    </aside>
+    <section class="content">
+      <section class="chat-panel">
+        <div class="chat-head">
+          <div class="chat-title">
+            <div class="chat-avatar">BG</div>
+            <div><strong>Assistente BuscaGeo</strong><span id="aiStatus">Interpretação local pronta</span></div>
+          </div>
+          <div class="chat-scope"><span id="scopeLabel">Escopo: pastas adicionadas (0)</span><button id="chatFoldersBtn"
+              class="button button-light">Pastas/HDs</button><button id="chatComputerBtn"
+              class="button button-outline">Todo o computador</button><button id="chatClearBtn"
+              class="button button-light" title="Limpar a conversa">🧹 Limpar</button></div>
+        </div>
+        <div class="chat-messages" id="chatMessages" aria-live="polite">
+          <div class="chat-row assistant">
+            <div class="chat-bubble">
+              <div class="chat-message-text">Olá! Diga o que você quer encontrar, como se estivesse conversando
+                comigo.<br><br>Exemplo: <strong>“Em qual documento aparece o CAR da Fazenda Santa
+                  Luzia?”</strong><br><br>Escolha abaixo se quer pesquisar só nomes/caminhos ou também o conteúdo dos
+                documentos.<br><br>
+                Atualize o catálogo para pesquisar dentro de documentos. Só envio trechos à IA remota se você autorizar
+                isso nas configurações.</div>
+              <div class="chat-meta">BuscaGeo · agora</div>
+            </div>
+          </div>
+        </div>
+        <div class="chat-search-options" role="group" aria-label="Onde pesquisar">
+          <span>Pesquisar:</span><button type="button" class="chat-search-mode" id="chatNameModeBtn"
+            aria-pressed="false">Só nomes e caminhos</button><button type="button"
+            class="chat-search-mode active-mode" id="chatContentModeBtn" aria-pressed="true">Nomes + conteúdo dos
+            arquivos</button>
+        </div>
+        <form class="chat-composer" id="chatForm"><textarea id="chatInput" rows="1" maxlength="500"
+            placeholder="Pergunte sobre documentos… Ex.: onde aparece o datum SIRGAS 2000?"
+            aria-label="Escreva sua busca"></textarea><button type="button" id="chatCancelBtn"
+            class="chat-cancel hidden">Parar</button><button type="submit" id="chatSendBtn" class="send-button"
+            aria-label="Enviar busca" title="Enviar busca">➤</button></form>
+        <div class="chat-footnote">Busca local em nomes e conteúdo indexado · PDFs, DOCX, ODT, XLSX, ODS, RTF, CSV, TXT
+          e XML ·
+          Enter envia · Shift+Enter quebra a linha</div>
+        <div id="progressArea" class="scan-progress hidden">
+          <div class="scan-progress-track">
+            <div class="scan-progress-bar" id="progressBar"></div>
+          </div>
+          <div class="scan-progress-info"><span id="progressText">Preparando…</span><button
+              class="button button-light progress-cancel hidden" id="cancelScanBtn" type="button">Cancelar
+              atualização</button><span id="progressPercent" class="scan-progress-percent"></span></div>
+        </div>
+      </section>
+      <div class="legacy-workspace">
+        <div class="welcome-row">
+          <div><span class="eyebrow">LOCALIZAÇÃO DE ARQUIVOS</span>
+            <h1>Encontre um projeto</h1>
+            <p>Pesquise por pessoa, fazenda, apelido, palavra do nome ou extensão.</p>
+          </div>
+          <div class="last-index"><span class="pulse"></span><span id="lastScan">Índice ainda não atualizado</span>
+          </div>
+        </div>
+        <section class="search-card">
+          <div class="search-row">
+            <div class="query-wrap"><span class="search-icon">⌕</span><input id="queryInput" type="search"
+                placeholder="Ex.: Conceição, Antônio Boca da Mata, CAR, matrícula…" autocomplete="off"><button
+                id="clearSearch" class="clear-button" title="Limpar busca">×</button></div><button id="searchBtn"
+              class="button button-primary search-button">Buscar</button>
+          </div>
+          <div class="filter-row"><label class="extension-filter"><span>EXTENSÃO</span><select id="extensionSelect">
+                <option value="">Todas as extensões</option>
+              </select></label>
+            <div class="quick-types"><span>TIPOS:</span><button class="filter-chip"
+                data-kind="geo">Geográficos</button><button class="filter-chip"
+                data-kind="docs">Documentos</button><button class="filter-chip"
+                data-kind="tables">Planilhas</button><button class="filter-chip" data-kind="car">CAR</button><button
+                class="filter-chip active" data-kind="all">Todos</button></div><button id="exportBtn"
+              class="button button-quiet">Exportar CSV</button>
+          </div>
+          <div class="mode-bar">
+            <div class="mode-copy"><strong id="searchModeLabel">Modo atual: catálogo SQLite/FTS5</strong><span
+                id="searchModeHelp">Busca local.</span></div>
+            <div class="mode-actions"><button id="directSearchBtn" class="button button-outline">Busca
+                direta</button><button id="indexSearchBtn" class="button button-light hidden">Voltar ao
+                catálogo</button><button id="cancelDirectBtn" class="button button-light hidden">Cancelar busca</button>
+            </div>
+          </div>
+        </section>
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-icon blue">▤</div>
+            <div><strong id="fileCount">0</strong><span id="fileStatLabel">arquivos no índice</span></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon green">⌕</div>
+            <div><strong id="resultCount">0</strong><span>resultados encontrados</span></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon amber">▱</div>
+            <div><strong id="rootCount">0</strong><span id="rootStatLabel">pastas monitoradas</span></div>
+          </div>
+        </div>
+        <section class="results-card">
+          <div class="results-head">
+            <div>
+              <h2>Resultados</h2>
+              <p id="resultsSubtitle">Digite para pesquisar.</p>
+            </div>
+            <div class="sort-wrap"><label for="sortSelect">Ordenar</label><select id="sortSelect">
+                <option value="modified">Mais recentes</option>
+                <option value="name">Nome A–Z</option>
+                <option value="path">Caminho</option>
+              </select></div>
+          </div>
+          <div class="table-scroll hidden">
+            <table>
+              <thead>
+                <tr>
+                  <th>ARQUIVO / REFERÊNCIA</th>
+                  <th>TIPO</th>
+                  <th>LOCALIZAÇÃO</th>
+                  <th>MODIFICADO</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="resultsBody"></tbody>
+            </table>
+          </div>
+          <div id="emptyState" class="empty-state">
+            <div class="empty-art">⌕</div><strong>Digite para pesquisar</strong><span>Digite um termo para
+              pesquisar.</span>
+          </div>
+          <div class="results-foot"><span id="resultsFootText">0 resultados</span><span>Duplo clique em um arquivo para
+              abri-lo</span></div>
+        </section>
+        <footer class="footer-note">O conteúdo dos arquivos permanece intacto e local.</footer>
+      </div>
+    </section>
+  </main>
+  <div class="modal-backdrop hidden" id="referenceModal">
+    <div class="modal">
+      <div class="modal-head">
+        <div><span class="eyebrow">CADASTRO DE PROJETO</span>
+          <h2 id="modalTitle">Cadastrar referência</h2>
+        </div><button class="icon-button" id="closeModal">×</button>
+      </div>
+      <p class="modal-intro">Associe nomes usados no escritório à pasta que contém os documentos. Assim, a busca por
+        qualquer desses nomes encontra os arquivos.</p>
+      <form id="referenceForm"><input type="hidden" id="refId"><label>Nome principal / projeto<input id="refTitle"
+            required placeholder="Ex.: Fazenda Santa Luzia — Conceição"></label><label>Nomes alternativos, apelidos ou
+          pessoas relacionadas<input id="refNames"
+            placeholder="Separe por ponto e vírgula. Ex.: Antônio Boca da Mata; Conceição; herdeiros"></label><label>Pasta
+          onde estão os arquivos<div class="folder-row"><input id="refPath" readonly required
+              placeholder="Clique em Escolher pasta…"><button type="button" id="chooseRefFolder"
+              class="button button-outline">Escolher pasta…</button></div></label><label>Observações (opcional)<textarea
+            id="refNotes" rows="2"
+            placeholder="Ex.: proprietária falecida; serviço de 2010; CAR separado"></textarea></label>
+        <div class="modal-actions"><button type="button" id="cancelModal"
+            class="button button-light">Cancelar</button><button type="submit" class="button button-primary">Salvar
+            referência</button></div>
+      </form>
+    </div>
+  </div>
+  <div class="modal-backdrop hidden" id="aiSettingsModal">
+    <div class="modal ai-modal">
+      <div class="modal-head">
+        <div><span class="eyebrow">CONFIGURAÇÃO</span>
+          <h2>Conectar uma IA</h2>
+        </div><button class="icon-button" id="closeAISettings">×</button>
+      </div>
+      <p class="modal-intro">Use um serviço compatível com a API Chat Completions, como um servidor local Ollama ou um
+        provedor remoto. Informe o endereço e o modelo.</p>
+      <form id="aiSettingsForm"><label>Endereço do serviço<input id="aiBaseUrl" type="url" required
+            placeholder="http://localhost:11434/v1"></label><button type="button" class="button button-light"
+          id="dashscopePreset">Preencher configuração Qwen / DashScope</button><label>Nome/ID do modelo<input
+            id="aiModel" required placeholder="qwen3-vl-235b-a22b-instruct"></label><label>Chave de API (opcional para
+          IA
+          local)<input id="aiApiKey" type="password" autocomplete="new-password"
+            placeholder="Vazio mantém a chave já salva"></label><label class="check-label"><input id="aiClearKey"
+            type="checkbox"><span>Apagar a chave salva</span></label><label class="consent-box"><input
+            id="aiRemoteConsent" type="checkbox"><span><strong>Autorizo o envio do texto digitado para um provedor
+              remoto</strong><small>O texto pode conter nomes de proprietários e qualquer caminho que você digitar; será
+              enviado para interpretação. Caminhos lidos do disco, lista de resultados, referências e conteúdo dos
+              documentos não são enviados por esta autorização. Para endpoint localhost, o tráfego fica no próprio
+              computador.</small></span></label>
+        <label class="consent-box"><input id="aiDocumentConsent" type="checkbox"><span><strong>Autorizo enviar trechos
+              de documentos à IA remota</strong><small>Somente os trechos encontrados pela busca local são enviados
+              para responder à pergunta atual, junto com a pergunta. Arquivos completos, nomes e caminhos lidos do
+              disco não são enviados; se você digitar um caminho na pergunta, ele faz parte do texto enviado. Cada
+              resposta continua mostrando os documentos de origem.</small></span></label>
+        <p id="aiConfigStatus" class="ai-config-status">A chave é guardada criptografada pelo Windows; ela não é
+          devolvida à interface.</p>
+        <div class="modal-actions"><button type="button" id="testAIButton" class="button button-light">Testar
+            conexão</button><button type="button" id="cancelAISettings"
+            class="button button-light">Cancelar</button><button type="submit" class="button button-primary">Salvar
+            conexão</button></div>
+      </form>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+  <script src="renderer.js"></script>
+</body>
+
+</html>

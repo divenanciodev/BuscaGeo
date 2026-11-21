@@ -1,0 +1,55 @@
+{
+  "name": "buscageo",
+  "version": "1.4.1",
+  "description": "Assistente conversacional para busca local de arquivos e projetos de georreferenciamento",
+  "main": "src/main.js",
+  "author": "BuscaGeo",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win nsis --x64"
+  },
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "br.com.buscageo.app",
+    "productName": "BuscaGeo",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/buscageo.ico",
+      "artifactName": "BuscaGeo-Instalador-${version}.${ext}",
+      "signExecutable": false
+    },
+    "nsis": {
+      "installerIcon": "build/buscageo.ico",
+      "uninstallerIcon": "build/buscageo.ico",
+      "installerHeaderIcon": "build/buscageo.ico",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "BuscaGeo",
+      "deleteAppDataOnUninstall": false,
+      "warningsAsErrors": false
+    }
+  },
+  "dependencies": {
+    "officeparser": "^8.4.1"
+  }
+}
